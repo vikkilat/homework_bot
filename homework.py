@@ -18,7 +18,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-handler = RotatingFileHandler('my_logger.log', maxBytes=50000000, backupCount=5)
+handler = RotatingFileHandler(
+    'my_logger.log', maxBytes=50000000, backupCount=5
+)
 logger.addHandler(handler)
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
@@ -36,8 +38,9 @@ HOMEWORK_VERDICTS = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
+
 def check_tokens():
-    '''Проверка доступности переменных окружения.'''
+    """Проверка доступности переменных окружения."""
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         logger.critical('Ошибка импорта токенов Telegram.')
         return False
@@ -48,7 +51,7 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    '''Бот отправляет сообщение в Telegram чат.'''
+    """Бот отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.info(f'Отправлено сообщение: "{message}"')
@@ -58,7 +61,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    '''Запрос к API Практикум.Домашка.'''
+    """Запрос к API Практикум.Домашка."""
     timestamp = timestamp or int(time.time())
     params = {'from_date': timestamp}
     try:
@@ -88,12 +91,14 @@ def check_response(response):
         raise KeyError('Отсутствует ключ homeworks')
     homeworks = response['homeworks']
     if type(homeworks) is not list:
-        raise TypeError('Под ключом homeworks домашки приходят не в виде списка')
+        raise TypeError(
+            'Под ключом homeworks домашки приходят не в виде списка'
+    )
     return response.get('homeworks')
 
 
 def parse_status(homework):
-    '''Проверка статуса конкретной домашней работы.'''
+    """Проверка статуса конкретной домашней работы."""
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
     if homework_name is not None and homework_status is not None:
