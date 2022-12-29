@@ -93,7 +93,7 @@ def check_response(response):
     if type(homeworks) is not list:
         raise TypeError(
             'Под ключом homeworks домашки приходят не в виде списка'
-    )
+        )
     return response.get('homeworks')
 
 
