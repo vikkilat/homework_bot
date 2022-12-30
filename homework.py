@@ -3,6 +3,7 @@ import os
 import time
 from http import HTTPStatus
 from logging.handlers import RotatingFileHandler
+from json.decoder import JSONDecodeError
 
 import requests
 import telegram
@@ -17,7 +18,7 @@ logging.basicConfig(
     format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
 )
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 handler = RotatingFileHandler(
     'my_logger.log', maxBytes=50000000, backupCount=5
 )
@@ -54,10 +55,10 @@ def send_message(bot, message):
     """Бот отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logging.info(f'Отправлено сообщение: "{message}"')
-        logging.debug('Бот успешно запущен.')
-    except Exception as error:
-        logging.error(f'Cбой отправки сообщения. Ошибка: {error}')
+        logger.debug('Бот успешно запущен.')
+        logger.info(f'Отправлено сообщение: "{message}"')
+    except telegram.TelegramError as error:
+        logger.error(f'Cбой отправки сообщения. Ошибка: {error}')
 
 
 def get_api_answer(timestamp):
@@ -70,25 +71,25 @@ def get_api_answer(timestamp):
                                          params=params
                                          )
     except requests.exceptions.RequestException as error:
-        logging.error(f'Ошибка при запросе к API: {error}')
+        logger.error(f'Ошибка при запросе к API: {error}')
         raise Exception(f'Ошибка при запросе к API: {error}')
     if homework_statuses.status_code != HTTPStatus.OK:
         status_code = homework_statuses.status_code
-        logging.error(f'Ошибка {status_code}')
+        logger.error(f'Ошибка {status_code}')
         raise Exception(f'Ошибка {status_code}')
     try:
         return homework_statuses.json()
-    except ValueError:
-        logger.error('Ошибка json')
-        raise ValueError('Ошибка json')
+    except JSONDecodeError as value_error:
+        logger.error(f'Код ответа: {value_error}')
+        raise JSONDecodeError(f'Код ответа: {value_error}')
 
 
 def check_response(response):
     """Проверка ответа от сервера."""
     if type(response) is not dict:
         raise TypeError('Ответ сервера не является словарем')
-    if 'homeworks' not in response:
-        raise KeyError('Отсутствует ключ homeworks')
+    if not all(['current_date' in response, 'homeworks' in response]):
+        raise KeyError('В ответе сервера нет нужных ключей')
     homeworks = response['homeworks']
     if type(homeworks) is not list:
         raise TypeError(
@@ -112,11 +113,21 @@ def parse_status(homework):
         raise KeyError('Ключи отсуствуют')
 
 
+def check_message(last_message, message):
+    """Проверка сообщений."""
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    last_message = ''
+    if last_message != message:
+        send_message(bot, message)
+        last_message = message
+
+
 def main():
     """Основная логика работы бота."""
     if not check_tokens():
         exit()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    send_message(bot, 'Я начал свою работу')
     timestamp = int(time.time())
     last_message = ''
     while True:
@@ -125,9 +136,7 @@ def main():
             homeworks = check_response(response)
             if homeworks:
                 message = parse_status(homeworks[0])
-                if last_message != message:
-                    send_message(bot, message)
-                    last_message = message
+                check_message(last_message, message)
             else:
                 logger.debug(f'Новых статусов нет. Перепроверка через '
                              f'{RETRY_PERIOD} сек.')
@@ -135,9 +144,7 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
-            if last_message != message:
-                send_message(bot, message)
-                last_message = message
+            check_message(last_message, message)
         else:
             logger.debug('Отправка повторного запроса')
         finally:
