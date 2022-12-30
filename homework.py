@@ -115,10 +115,9 @@ def parse_status(homework):
 
 def check_message(last_message, message):
     """Проверка сообщений."""
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
     last_message = ''
     if last_message != message:
-        send_message(bot, message)
+        send_message(telegram.Bot(token=TELEGRAM_TOKEN), message)
         last_message = message
 
 
