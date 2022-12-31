@@ -113,11 +113,12 @@ def parse_status(homework):
         raise KeyError('Ключи отсуствуют')
 
 
-def check_message(last_message, message):
+def check_message(last_message, message, bot):
     """Проверка сообщений."""
     last_message = ''
+    bot.send_message(TELEGRAM_CHAT_ID, message)
     if last_message != message:
-        send_message(TELEGRAM_CHAT_ID, message)
+        send_message(bot, message)
         last_message = message
 
 
@@ -135,7 +136,7 @@ def main():
             homeworks = check_response(response)
             if homeworks:
                 message = parse_status(homeworks[0])
-                check_message(last_message, message)
+                check_message(last_message, message, bot)
             else:
                 logger.debug(f'Новых статусов нет. Перепроверка через '
                              f'{RETRY_PERIOD} сек.')
@@ -143,7 +144,7 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
-            check_message(last_message, message)
+            check_message(last_message, message, bot)
         else:
             logger.debug('Отправка повторного запроса')
         finally:
