@@ -117,7 +117,7 @@ def check_message(last_message, message):
     """Проверка сообщений."""
     last_message = ''
     if last_message != message:
-        send_message(telegram.Bot(token=TELEGRAM_TOKEN), message)
+        send_message(TELEGRAM_CHAT_ID, message)
         last_message = message
 
 
